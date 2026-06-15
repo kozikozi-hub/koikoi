@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>KoiKoi Score Supporter</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="app-label">こいこいスコアサポーター</p>
+        <p class="round-label" id="roundLabel">ラウンド 1 / 12</p>
+      </div>
+      <div class="top-actions">
+        <button id="resetButton" class="icon-button" aria-label="ゲームをリセット">リセット</button>
+        <button id="settingsButton" class="icon-button" aria-label="設定を開く">設定</button>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <section class="scoreboard-card">
+        <div class="player-card" id="playerCard0">
+          <label class="player-name-label" for="playerName0">プレイヤー1</label>
+          <input id="playerName0" class="player-name-input" type="text" value="プレイヤー1" maxlength="12" />
+          <div class="score-value" id="playerScore0">0</div>
+          <div class="badge" id="dealerBadge0">親</div>
+        </div>
+        <div class="player-card" id="playerCard1">
+          <label class="player-name-label" for="playerName1">プレイヤー2</label>
+          <input id="playerName1" class="player-name-input" type="text" value="プレイヤー2" maxlength="12" />
+          <div class="score-value" id="playerScore1">0</div>
+          <div class="badge" id="dealerBadge1">親</div>
+        </div>
+      </section>
+
+      <section class="action-area">
+        <button id="enterRoundButton" class="primary-button">ラウンド結果を入力</button>
+        <button id="viewHistoryButton" class="secondary-button">履歴を見る</button>
+      </section>
+
+      <section class="summary-card">
+        <div class="summary-item">
+          <span>総ラウンド数</span>
+          <strong id="totalRoundsDisplay">12</strong>
+        </div>
+        <div class="summary-item">
+          <span>現在の親</span>
+          <strong id="currentDealerLabel">プレイヤー1</strong>
+        </div>
+      </section>
+    </main>
+
+    <div id="modalBackdrop" class="modal-backdrop hidden"></div>
+
+    <div id="roundModal" class="modal-panel hidden" aria-hidden="true">
+      <div class="modal-header">
+        <h2>ラウンド結果</h2>
+        <button class="close-button" id="closeRoundModal" aria-label="モーダルを閉じる">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="section-block">
+          <p class="section-title">勝者</p>
+          <div class="winner-buttons">
+            <button id="winner0" class="winner-button">プレイヤー1</button>
+            <button id="winner1" class="winner-button">プレイヤー2</button>
+            <button id="winnerDraw" class="winner-button">引き分け</button>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <p class="section-title">役</p>
+          <div id="yakuList" class="yaku-grid"></div>
+        </div>
+
+        <div class="section-block">
+          <label class="checkbox-row">
+            <input id="koikoiCheckbox" type="checkbox" />
+            <span>今ラウンドでこいこい宣言</span>
+          </label>
+        </div>
+
+        <div class="section-block preview-card">
+          <p class="section-title">得点プレビュー</p>
+          <div class="preview-row">
+            <span>原点</span>
+            <strong id="rawScorePreview">0</strong>
+          </div>
+          <div class="preview-row">
+            <span>最終得点</span>
+            <strong id="finalScorePreview">0</strong>
+          </div>
+          <div class="preview-row small-text" id="koikoiGaeshiPreview">こいこい返し適用なし</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="saveRoundButton" class="primary-button full-width">ラウンドを保存</button>
+      </div>
+    </div>
+
+    <div id="settingsPanel" class="side-panel hidden" aria-hidden="true">
+      <div class="panel-header">
+        <h2>設定</h2>
+        <button class="close-button" id="closeSettings" aria-label="設定を閉じる">×</button>
+      </div>
+      <div class="panel-body">
+        <div class="setting-group">
+          <label class="setting-row">
+            <span>総ラウンド数</span>
+            <input id="totalRoundsInput" type="number" min="4" max="24" value="12" />
+          </label>
+          <label class="setting-row">
+            <span>7点以上で2倍を有効</span>
+            <input id="doubleOverToggle" type="checkbox" checked />
+          </label>
+          <label class="setting-row">
+            <span>2倍基準点</span>
+            <input id="doubleThresholdInput" type="number" min="1" max="50" value="7" />
+          </label>
+          <label class="setting-row">
+            <span>こいこい返しを有効</span>
+            <input id="koikoiGaeshiToggle" type="checkbox" checked />
+          </label>
+          <label class="setting-row">
+            <span>こいこい返し倍率</span>
+            <input id="koikoiMultiplierInput" type="number" min="1" max="10" value="2" />
+          </label>
+        </div>
+
+        <div class="setting-group">
+          <p class="section-title">役の設定</p>
+          <div id="yakuSettingsList"></div>
+        </div>
+      </div>
+      <div class="panel-footer">
+        <button id="closeSettingsButton" class="primary-button full-width">保存して閉じる</button>
+      </div>
+    </div>
+
+    <div id="historyPanel" class="side-panel hidden" aria-hidden="true">
+      <div class="panel-header">
+        <h2>履歴</h2>
+        <button class="close-button" id="closeHistory" aria-label="履歴を閉じる">×</button>
+      </div>
+      <div class="panel-body" id="historyList"></div>
+      <div class="panel-footer">
+        <button id="closeHistoryButton" class="primary-button full-width">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
