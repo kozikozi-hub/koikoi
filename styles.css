@@ -93,7 +93,7 @@ button {
 
 .scoreboard-card {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
     gap: 1rem;
 }
 
@@ -493,10 +493,6 @@ button {
 }
 
 @media (max-width: 600px) {
-    .scoreboard-card {
-        grid-template-columns: 1fr;
-    }
-
     .winner-buttons {
         grid-template-columns: 1fr;
     }

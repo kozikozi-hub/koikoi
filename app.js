@@ -1,6 +1,25 @@
 const STORAGE_RULES_KEY = 'koikoiRules';
 const STORAGE_STATE_KEY = 'koikoiGameState';
 
+/*
+  役を追加する手順:
+  1. ここ `defaultRules.yakuSettings` に新しい役を追加します。
+     - key: 一意の識別子（例: `newYaku`）
+     - label: UIに表示する役名
+     - enabled: 設定でON/OFFできるようにする場合は true
+     - point: この役の基本点数
+     - description: 役の説明（infoボタンで表示されます）
+     - countable: カウント型役の場合は true を追加
+     - baseCount: countable の場合、最低枚数を指定
+  2. `renderYakuList()` では `rules.yakuSettings` を元に役カードを生成します。
+     - 単純役はタップで選択/解除できます。
+     - countable 役は選択時に枚数変更コントロールが表示されます。
+  3. `calculateRawScore()` に、新しい役の点数ロジックを追加する必要はありません。
+     - non-countable役は point をそのまま加算します。
+     - countable役は `countable` と `baseCount` に基づき計算されます。
+  4. 設定画面では自動的に `yakuSettings` の一覧が描画されます。
+  5. ルール変更を保存後、`localStorage` に保存され、次回読み込み時にも反映されます。
+*/
 const defaultRules = {
   totalRounds: 12,
   doubleOverScore: { enabled: true, threshold: 7 },
@@ -340,23 +359,24 @@ function changeYakuPoint(key, delta) {
 function updateScorePreview() {
   const rawScore = calculateRawScore(roundForm.yakuKeys);
   let finalScore = rawScore;
-  const thresholdApplied = rules.doubleOverScore.enabled && rawScore >= rules.doubleOverScore.threshold;
+  let thresholdApplied = rules.doubleOverScore.enabled && rawScore >= rules.doubleOverScore.threshold;
   let previewLines = [];
 
-  if (thresholdApplied) {
+  let gaeshiApplied = false;
+  if (roundForm.winner !== null && roundForm.winner !== 'draw') {
+    gaeshiApplied = isKoikoiGaeshiApplied(roundForm.winner, roundForm.koikoiDeclared);
+  }
+
+  if (gaeshiApplied) {
+    finalScore = rawScore * rules.koikoiGaeshi.multiplier;
+    previewLines.push(`Koikoi Gaeshi applied ×${rules.koikoiGaeshi.multiplier}`);
+    thresholdApplied = false;
+  } else if (thresholdApplied) {
     finalScore = rawScore * 2;
     previewLines.push(`Double applied ×2 (≥ ${rules.doubleOverScore.threshold})`);
   }
 
-  let gaeshiText = 'Koikoi Gaeshi not applied';
-  if (roundForm.winner !== null && roundForm.winner !== 'draw') {
-    const gaeshiApplied = isKoikoiGaeshiApplied(roundForm.winner, roundForm.koikoiDeclared);
-    if (gaeshiApplied) {
-      finalScore *= rules.koikoiGaeshi.multiplier;
-      gaeshiText = `Koikoi Gaeshi applied ×${rules.koikoiGaeshi.multiplier}`;
-      previewLines.push(gaeshiText);
-    }
-  }
+  const gaeshiText = gaeshiApplied ? `Koikoi Gaeshi applied ×${rules.koikoiGaeshi.multiplier}` : 'Koikoi Gaeshi not applied';
 
   elements.rawScorePreview.textContent = rawScore;
   elements.finalScorePreview.textContent = finalScore;
@@ -501,14 +521,14 @@ function rebuildTotals() {
   state.history = state.history.map(entry => {
     let rawScore = calculateRawScore(entry.yakuKeys, entry.yakuCounts);
     let finalScore = rawScore;
-    const thresholdApplied = rules.doubleOverScore.enabled && rawScore >= rules.doubleOverScore.threshold;
-    if (thresholdApplied) {
-      finalScore = rawScore * 2;
-    }
+    let thresholdApplied = rules.doubleOverScore.enabled && rawScore >= rules.doubleOverScore.threshold;
     const loser = entry.winner === 0 ? 1 : 0;
     const koikoiApplied = rules.koikoiGaeshi.enabled && entry.winner !== 'draw' && entry.winner !== null && activeKoikoi === loser;
     if (koikoiApplied) {
-      finalScore *= rules.koikoiGaeshi.multiplier;
+      finalScore = rawScore * rules.koikoiGaeshi.multiplier;
+      thresholdApplied = false;
+    } else if (thresholdApplied) {
+      finalScore = rawScore * 2;
     }
     if (entry.winner !== 'draw' && entry.winner !== null) {
       if (entry.koikoiDeclared) {
@@ -540,17 +560,15 @@ function buildRoundEntry() {
   let thresholdApplied = false;
   let koikoiApplied = false;
 
-  if (rules.doubleOverScore.enabled && rawScore >= rules.doubleOverScore.threshold) {
+  const loser = roundForm.winner === 0 ? 1 : 0;
+  const gaeshiAvailable = roundForm.winner !== null && roundForm.winner !== 'draw' && rules.koikoiGaeshi.enabled && state.activeKoikoiPlayer === loser;
+
+  if (gaeshiAvailable) {
+    finalScore = rawScore * rules.koikoiGaeshi.multiplier;
+    koikoiApplied = true;
+  } else if (rules.doubleOverScore.enabled && rawScore >= rules.doubleOverScore.threshold) {
     finalScore *= 2;
     thresholdApplied = true;
-  }
-
-  if (roundForm.winner !== null && roundForm.winner !== 'draw') {
-    const loser = roundForm.winner === 0 ? 1 : 0;
-    if (rules.koikoiGaeshi.enabled && state.activeKoikoiPlayer === loser) {
-      finalScore *= rules.koikoiGaeshi.multiplier;
-      koikoiApplied = true;
-    }
   }
 
   return {
